@@ -27,6 +27,7 @@ class DataService:
 
     async def load_abilities(self, directory):
         for filename in glob.iglob('%s/**/*.yml' % directory, recursive=True):
+            filename = "plugins/stockpile/abilities/discovery/c0da588f-79f0-4263-8998-7496b1a40596.yml"
             for entries in self.utility_svc.strip_yml(filename):
                 for ab in entries:
                     for ex, el in ab['executors'].items():
@@ -38,7 +39,8 @@ class DataService:
                                                   cleanup=b64encode(
                                                       el['cleanup'].strip().encode('utf-8')).decode() if el.get(
                                                       'cleanup') else None,
-                                                  payload=el.get('payload'), parser=el.get('parser'))
+                                                  payload=el.get('payload'), parser=el.get('parser'),
+                                                  parsers = el.get('parsers'))
 
     async def load_facts(self, config):
         for entries in self.utility_svc.strip_yml(config):
@@ -55,7 +57,7 @@ class DataService:
     """ CREATE """
 
     async def create_ability(self, ability_id, tactic, technique, name, test, description, platform, cleanup=None,
-                             payload=None, parser=None):
+                             payload=None, parser=None, parsers = None):
         await self.dao.create('core_attack',
                               dict(attack_id=technique['attack_id'], name=technique['name'], tactic=tactic))
         entry = await self.dao.get('core_attack', dict(attack_id=technique['attack_id']))
@@ -68,6 +70,10 @@ class DataService:
         if parser:
             parser['ability'] = identifier
             await self.dao.create('core_parser', parser)
+        if parsers:
+            for k, parser in parsers.items():
+                parser['ability'] = identifier
+                await self.dao.create('core_parser', parser)
         return 'Saved ability: %s' % ability_id
 
     async def create_adversary(self, name, description, phases):
