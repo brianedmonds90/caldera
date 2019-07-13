@@ -14,23 +14,26 @@ class ParsingService:
               'where b.op_id = %s and a.parsed is null;' % operation['id']
         op_source = await self.data_svc.dao.get('core_source', dict(name=operation['name']))
         for x in await self.data_svc.dao.raw_select(sql):
-            parser = await self.data_svc.dao.get('core_parser', dict(ability=x['ability']))
-            if parser:
-                if parser[0]['name'] == 'json':
-                    matched_facts = self._json(parser[0], b64decode(x['output']).decode('utf-8'))
-                elif parser[0]['name'] == 'line':
-                    matched_facts = self._line(parser[0], b64decode(x['output']).decode('utf-8'))
-                else:
-                    matched_facts = self._regex(parser[0], b64decode(x['output']).decode('utf-8'))
+            parsers = await self.data_svc.dao.get('core_parser', dict(ability=x['ability']))
+            if parsers:
+                for parser in parsers:
+                    if parser['name'] == 'json':
+                        matched_facts = self._json(parser, b64decode(x['output']).decode('utf-8'))
+                    elif parser['name'] == 'line':
+                        matched_facts = self._line(parser, b64decode(x['output']).decode('utf-8'))
+                    elif parser['name'] == 'split':
+                        matched_facts = self._split(parser, b64decode(x['output']).decode('utf-8'))
+                    else:
+                        matched_facts = self._regex(parser, b64decode(x['output']).decode('utf-8'))
 
-                # save facts to DB
-                for match in matched_facts:
-                    if not any(f['property'] == match['fact'] and f['value'] == match['value'] and f['blacklist'] for f in
-                               operation['facts']):
-                        await self.data_svc.create_fact(
-                            source_id=op_source[0]['id'], link_id=x['id'], property=match['fact'], value=match['value'],
-                            set_id=match['set_id'], score=1, blacklist=0
-                        )
+                    # save facts to DB
+                    for match in matched_facts:
+                        if not any(f['property'] == match['fact'] and f['value'] == match['value'] and f['blacklist'] for f in
+                                   operation['facts']):
+                            await self.data_svc.create_fact(
+                                source_id=op_source[0]['id'], link_id=x['id'], property=match['fact'], value=match['value'],
+                                set_id=match['set_id'], score=1, blacklist=0
+                            )
 
                 # mark result as parsed
                 update = dict(parsed=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -67,3 +70,14 @@ class ParsingService:
     @staticmethod
     def _line(parser, blob):
         return [dict(fact=parser['property'], value=f, set_id=0) for f in blob.split('\n') if f]
+
+    @staticmethod
+    def _split(parser, blob):
+        split_val = parser['script'].split(',')[1]
+        split_pos = int(parser['script'].split(',')[0])
+        matched_facts = []
+        for i, f in enumerate(blob.split('\n')):
+            if f:
+                matched_facts.append(dict(fact=parser['property'], value=f.split(split_val)[split_pos], set_id=i))
+        return matched_facts
+

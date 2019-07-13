@@ -27,7 +27,7 @@ class DataService:
 
     async def load_abilities(self, directory):
         for filename in glob.iglob('%s/**/*.yml' % directory, recursive=True):
-            filename = "plugins/stockpile/abilities/discovery/c0da588f-79f0-4263-8998-7496b1a40596.yml"
+            #filename = "plugins/stockpile/abilities/discovery/c0da588f-79f0-4263-8998-7496b1a40596.yml"
             for entries in self.utility_svc.strip_yml(filename):
                 for ab in entries:
                     for ex, el in ab['executors'].items():
