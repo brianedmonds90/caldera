@@ -22,3 +22,9 @@
 [submodule "plugins/terminal"]
 	path = plugins/terminal
 	url = https://github.com/mitre/terminal.git
+[submodule "plugins/plugins/bsf"]
+	path = plugins/plugins/bsf
+	url = https://gitlab.mitre.org/bedmonds/bsf_plugin.git
+[submodule "plugins/bsf"]
+	path = plugins/bsf
+	url = https://gitlab.mitre.org/bedmonds/bsf_plugin.git
